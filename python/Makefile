@@ -1,4 +1,4 @@
 run:
-	python main.py
+	.venv/bin/python main.py
 typecheck:
-	python -m mypy main.py
+	.venv/bin/python -m mypy main.py
