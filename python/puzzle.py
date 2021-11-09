@@ -63,3 +63,14 @@ class Puzzle:
             self._rows[key] = value
         else:
             raise TypeError(f'unexpected key {key}')
+
+    def __eq__(self, other: 'Puzzle'):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return all(
+            self_row == other_row
+            for (self_row, other_row) in zip(self.rows, other.rows)
+        )
+
+    def __contains__(self, value: str) -> bool:
+        return any(value in row for row in self._rows)
