@@ -1,8 +1,11 @@
+from copy import copy
+from collections.abc import Iterable
+
 from typing import overload
 
 class Puzzle:
-    def __init__(self, rows: list[list[str]]):
-        self._rows = rows
+    def __init__(self, rows: Iterable[Iterable[str]]):
+        self._rows = list(list(x for x in row) for row in rows)
 
     @classmethod
     def from_string(cls, s: str) -> 'Puzzle':
@@ -12,11 +15,9 @@ class Puzzle:
         rows = [digits[n:n+9] for n in range(0, 81, 9)]
         return cls(rows)
 
-    def to_string(self) -> str:
-        return ''.join(digit for row in self._rows for digit in row)
-
-    def __str__(self) -> str:
-        return self.to_string()
+    @property
+    def is_solved(self):
+        return '0' not in self
 
     @property
     def rows(self):
@@ -25,6 +26,18 @@ class Puzzle:
     @property
     def columns(self):
         return tuple(col for col in zip(*self.rows))
+
+    def to_string(self) -> str:
+        return ''.join(digit for row in self._rows for digit in row)
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+    def __repr__(self) -> str:
+        cls_name = self.__class__.__name__
+        offset = len(cls_name) + 2
+        rows_repr = '\n'.join(['    ' + repr(row) for row in self.rows])
+        return f'{cls_name}([\n{rows_repr}\n])'
 
     @overload
     def __getitem__(self, key: int) -> list[str]:
@@ -64,7 +77,7 @@ class Puzzle:
         else:
             raise TypeError(f'unexpected key {key}')
 
-    def __eq__(self, other: 'Puzzle'):
+    def __eq__(self, other: object):
         if not isinstance(other, self.__class__):
             return NotImplemented
         return all(
@@ -74,3 +87,7 @@ class Puzzle:
 
     def __contains__(self, value: str) -> bool:
         return any(value in row for row in self._rows)
+
+    def __copy__(self) -> 'Puzzle':
+        cls = self.__class__
+        return cls(copy(row) for row in self._rows)
