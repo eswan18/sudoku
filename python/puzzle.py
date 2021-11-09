@@ -1,11 +1,14 @@
 from copy import copy
+from array import array
 from collections.abc import Iterable
+from itertools import product
 
-from typing import overload
+from typing import overload, Generator
 
 class Puzzle:
     def __init__(self, rows: Iterable[Iterable[str]]):
         self._rows = list(list(x for x in row) for row in rows)
+        self._flat = tuple(x for row in rows for x in row)
 
     @classmethod
     def from_string(cls, s: str) -> 'Puzzle':
@@ -26,6 +29,14 @@ class Puzzle:
     @property
     def columns(self):
         return tuple(col for col in zip(*self.rows))
+
+    @property
+    def occupied_squares(self) -> Generator[tuple[int, int], None, None]:
+        return (
+            (idx // 9, idx % 9)
+            for idx, val in enumerate(self._flat)
+            if val != '0'
+        )
 
     def to_string(self) -> str:
         return ''.join(digit for row in self._rows for digit in row)
@@ -72,8 +83,10 @@ class Puzzle:
                 raise ValueError('slices must have length two')
             row, col = key
             self._rows[row][col] = value
+            self._flat = tuple(x for row in self._rows for x in row)
         elif isinstance(key, int):
             self._rows[key] = value
+            self._flat = tuple(x for row in self._rows for x in row)
         else:
             raise TypeError(f'unexpected key {key}')
 
@@ -91,3 +104,19 @@ class Puzzle:
     def __copy__(self) -> 'Puzzle':
         cls = self.__class__
         return cls(copy(row) for row in self._rows)
+
+    def spots_for(self, digit) -> set[tuple[int, int]]:
+        locations = self.locations_of(digit)
+        rows, columns = zip(*locations)
+        remaining_rows = set(range(9)) - set(rows)
+        remaining_cols = set(range(9)) - set(columns)
+        viable_squares = set(product(remaining_rows, remaining_cols))
+        viable_squares -= set(self.occupied_squares)
+        return viable_squares
+
+    def locations_of(self, digit) -> list[tuple[int, int]]:
+        locations: list[tuple[int, int]] = []
+        for row_idx, row in enumerate(self._rows):
+            if digit in row:
+                locations.append((row_idx, row.index(digit)))
+        return locations
