@@ -1,9 +1,11 @@
 from copy import copy
 from itertools import product
+from collections import defaultdict
 
 from puzzle import Puzzle
 
 ALL_DIGITS = {str(i) for i in range(1, 10)}
+
 
 def solve(input_puzzle: str) -> str:
     puzzle = Puzzle.from_string(input_puzzle)
@@ -13,17 +15,20 @@ def solve(input_puzzle: str) -> str:
 
 
 def naive_solve(input_puzzle: Puzzle) -> Puzzle:
-    current_puzzle = next_puzzle = input_puzzle
+    current_puzzle = input_puzzle
+    last_puzzle: Puzzle | None = None
     while True:
-        current_puzzle = next_puzzle
-        next_puzzle = digit_elimination_update(current_puzzle)
-        next_puzzle = square_elimination_update(next_puzzle)
-        if next_puzzle.is_solved:
-            return next_puzzle
-        if next_puzzle == current_puzzle:
+        print('Iterating solver')
+        result = digit_elimination_update(current_puzzle) or square_elimination_update(current_puzzle)
+        if result is None:
             raise RuntimeError("Deadend: couldn't solve puzzle")
+        if result.is_solved:
+            return result
+        else:
+            current_puzzle = result
+        print('\n' + current_puzzle.pretty() + '\n')
 
-def digit_elimination_update(puzzle: Puzzle) -> Puzzle:
+def digit_elimination_update(puzzle: Puzzle) -> Puzzle | None:
     # Look at every position on the board until you find one that can only take one
     # value.
     for i, j in product(range(9), range(9)):
@@ -36,18 +41,27 @@ def digit_elimination_update(puzzle: Puzzle) -> Puzzle:
                 new_puzzle = copy(puzzle)
                 new_puzzle[i, j] = missing_digit
                 print(f'Updated [{i}, {j}] to be {missing_digit}]')
-                print(repr(new_puzzle))
                 return new_puzzle
-    return puzzle
+    return None
 
-def square_elimination_update(puzzle: Puzzle) -> Puzzle:
+def square_elimination_update(puzzle: Puzzle) -> Puzzle | None:
     for digit in ALL_DIGITS:
         viable_locations = puzzle.spots_for(digit)
-        print(f'found {len(viable_locations)} for digit {digit}')
-        if len(viable_locations) == 1:
-            print(f'found just one location for {digit}')
-            viable_location, *_ = viable_locations
-            new_puzzle = copy(puzzle)
-            new_puzzle[viable_location] = digit
-            return new_puzzle
-    return puzzle
+        by_row: defaultdict[int, list[tuple[int, int]]] = defaultdict(list)
+        by_col: defaultdict[int, list[tuple[int, int]]] = defaultdict(list)
+        by_grid: defaultdict[int, list[tuple[int, int]]] = defaultdict(list)
+        for row, col in viable_locations:
+            loc = row, col
+            by_row[row].append(loc)
+            by_col[col].append(loc)
+            grid = Puzzle.grid_of_square(loc)
+            by_grid[grid].append(loc)
+        for dct in (by_row, by_col, by_grid):
+            for key in dct:
+                # This is the only place in the row/col/grid where this number can go.
+                if len(dct[key]) == 1:
+                    location, *_ = dct[key]
+                    new_puzzle = copy(puzzle)
+                    new_puzzle[location] = digit
+                    return new_puzzle
+    return None

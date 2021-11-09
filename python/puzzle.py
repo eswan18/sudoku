@@ -50,6 +50,15 @@ class Puzzle:
         rows_repr = '\n'.join(['    ' + repr(row) for row in self.rows])
         return f'{cls_name}([\n{rows_repr}\n])'
 
+    def pretty(self) -> str:
+        lines = []
+        for idx, row in enumerate(self._rows):
+            if idx in (3, 6):
+                lines.append('-' * 5 + '|' + '-' * 5 + '|' + '-' * 5)
+            lines.append(f' {"".join(row[:3])} | {"".join(row[3:6])} | {"".join(row[6:])} ')
+        return '\n'.join(lines)
+
+
     @overload
     def __getitem__(self, key: int) -> list[str]:
         ...
@@ -120,3 +129,10 @@ class Puzzle:
             if digit in row:
                 locations.append((row_idx, row.index(digit)))
         return locations
+
+    @staticmethod
+    def grid_of_square(location: tuple[int, int]) -> int:
+        row, col = location
+        grid_row = row // 3
+        grid_col = col // 3
+        return grid_row * 3 + grid_col
